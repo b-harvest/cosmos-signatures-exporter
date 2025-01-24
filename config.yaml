@@ -1,0 +1,11 @@
+prometheusListenPort: 28685
+
+name: "Axelar"
+chain_id: "axelar-dojo-1"
+valoper_address: "axelarvaloper1l954fcz7hu9sedc7fd4ltjs4ucs7af6csqsxlw"
+
+
+nodes:
+  - url: "https://axelar-rpc.polkachu.com:443"
+    alert_if_down: true
+
