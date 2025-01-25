@@ -1,4 +1,4 @@
-module main
+module github.com/b-harvest/cosmos-sigs-exporter
 
 go 1.23
 
