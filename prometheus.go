@@ -66,55 +66,55 @@ func prometheusExporter(l *log.Entry, ctx context.Context, updates chan *promUpd
 
 	// setup our signing gauges
 	signed := promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tenderduty_signed_blocks",
-		Help: "count of blocks signed since tenderduty was started",
+		Name: "cosmos_sig_signed_blocks",
+		Help: "count of blocks signed since cosmos_sig was started",
 	}, chainLabels)
 	proposed := promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tenderduty_proposed_blocks",
-		Help: "count of blocks proposed since tenderduty was started",
+		Name: "cosmos_sig_proposed_blocks",
+		Help: "count of blocks proposed since cosmos_sig was started",
 	}, chainLabels)
 	missed := promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tenderduty_missed_blocks",
-		Help: "count of blocks missed without seeing a precommit or prevote since tenderduty was started",
+		Name: "cosmos_sig_missed_blocks",
+		Help: "count of blocks missed without seeing a precommit or prevote since cosmos_sig was started",
 	}, chainLabels)
 	missedConsecutive := promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tenderduty_consecutive_missed_blocks",
+		Name: "cosmos_sig_consecutive_missed_blocks",
 		Help: "the current count of consecutively missed blocks regardless of precommit or prevote status",
 	}, chainLabels)
 	windowSize := promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tenderduty_missed_block_window",
+		Name: "cosmos_sig_missed_block_window",
 		Help: "the missed block aka slashing window",
 	}, chainLabels)
 	missedWindow := promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tenderduty_missed_blocks_for_window",
+		Name: "cosmos_sig_missed_blocks_for_window",
 		Help: "the current count of missed blocks in the slashing window regardless of precommit or prevote status",
 	}, chainLabels)
 	lastBlockSec := promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tenderduty_time_since_last_block",
+		Name: "cosmos_sig_time_since_last_block",
 		Help: "how many seconds since the previous block was finalized, only set when a new block is seen, not useful for stall detection, helpful for averaging times",
 	}, chainLabels)
 	lastBlockSecUnfinalized := promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tenderduty_time_since_last_block_unfinalized",
+		Name: "cosmos_sig_time_since_last_block_unfinalized",
 		Help: "how many seconds since the previous block was finalized, set regardless of finalization, useful for stall detection, not helpful for figuring average time",
 	}, chainLabels)
 
 	// setup node health gauges:
 	nodesMonitored := promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tenderduty_total_monitored_endpoints",
+		Name: "cosmos_sig_total_monitored_endpoints",
 		Help: "the count of rpc endpoints being monitored for a chain",
 	}, chainLabels)
 	nodesUnhealthy := promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tenderduty_total_unhealthy_endpoints",
+		Name: "cosmos_sig_total_unhealthy_endpoints",
 		Help: "the count of unhealthy rpc endpoints being monitored for a chain",
 	}, chainLabels)
 
 	// extra labels for individual node stats
 	nodeLagSec := promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tenderduty_endpoint_syncing_seconds_behind",
+		Name: "cosmos_sig_endpoint_syncing_seconds_behind",
 		Help: "how many seconds a node is behind the head of a chain",
 	}, hostLabels)
 	nodeDownSec := promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "tenderduty_endpoint_down_seconds",
+		Name: "cosmos_sig_endpoint_down_seconds",
 		Help: "how many seconds a node has been marked as unhealthy",
 	}, hostLabels)
 
