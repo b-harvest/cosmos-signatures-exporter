@@ -43,7 +43,7 @@ func (c *Config) GetValInfo(first bool) (err error) {
 	// Fetch info from /cosmos.staking.v1beta1.Query/Validator
 	// it's easier to ask people to provide valoper since it's readily available on
 	// explorers, so make it easy and lookup the consensus key for them.
-	c.valInfo.Conspub, c.valInfo.Moniker, c.valInfo.Jailed, c.valInfo.Bonded, err = getVal(ctx, c.client, c.ValAddress)
+	c.valInfo.Conspub, c.valInfo.Moniker, c.valInfo.Jailed, c.valInfo.Bonded, err = getVal(ctx, c.rpcClient, c.ValAddress)
 	if err != nil {
 		return
 	}
@@ -91,7 +91,7 @@ func (c *Config) GetValInfo(first bool) (err error) {
 	if err != nil {
 		return
 	}
-	resp, err := c.client.ABCIQuery(ctx, "/cosmos.slashing.v1beta1.Query/SigningInfo", b)
+	resp, err := c.rpcClient.ABCIQuery(ctx, "/cosmos.slashing.v1beta1.Query/SigningInfo", b)
 	if resp == nil || resp.Response.Value == nil {
 		err = errors.New("could not query validator slashing status, got empty response")
 		return
@@ -115,7 +115,7 @@ func (c *Config) GetValInfo(first bool) (err error) {
 		if err != nil {
 			return
 		}
-		resp, err = c.client.ABCIQuery(ctx, "/cosmos.slashing.v1beta1.Query/Params", b)
+		resp, err = c.rpcClient.ABCIQuery(ctx, "/cosmos.slashing.v1beta1.Query/Params", b)
 		if err != nil {
 			return
 		}

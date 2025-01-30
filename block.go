@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/pkg/errors"
-	"github.com/tendermint/tendermint/rpc/coretypes"
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/bytes"
+	"github.com/tendermint/tendermint/types"
 	"strings"
 	"time"
 )
@@ -113,7 +115,7 @@ func (c *Config) RunBlockQuerier() {
 		}
 	}()
 
-	blockChan := make(chan *coretypes.ResultBlock)
+	blockChan := make(chan *ResultBlock)
 	go func() {
 		e := handleBlocks(ctx, blockChan, resultChan, strings.ToUpper(hex.EncodeToString(c.valInfo.Conspub)))
 		if e != nil {
@@ -126,7 +128,9 @@ func (c *Config) RunBlockQuerier() {
 	go func() {
 		for {
 			if c.lastBlockNum == 0 {
-				tmStatus, err := c.client.Status(ctx)
+				tmStatus := new(ResultStatus)
+
+				_, err := c.client.Call(ctx, "status", map[string]interface{}{}, tmStatus)
 				if err != nil {
 					c.logger.Error(err)
 					cancel()
@@ -138,7 +142,14 @@ func (c *Config) RunBlockQuerier() {
 				c.logger.Infof("lastBlockNum is 0. set to %d", c.lastBlockNum)
 			}
 
-			tmStatus, err := c.client.Status(ctx)
+			tmStatus := new(ResultStatus)
+
+			_, err := c.client.Call(ctx, "status", map[string]interface{}{}, tmStatus)
+			if err != nil {
+				c.logger.Error(err)
+				cancel()
+				return
+			}
 			if err != nil {
 				c.logger.Error(err)
 				cancel()
@@ -147,7 +158,10 @@ func (c *Config) RunBlockQuerier() {
 
 			c.lastBlockMtx.Lock()
 			for ; c.lastBlockNum < tmStatus.SyncInfo.LatestBlockHeight-1; c.lastBlockNum += 1 {
-				msg, e := c.client.Block(ctx, &c.lastBlockNum)
+				result := new(ResultBlock)
+				params := make(map[string]interface{})
+				params["height"] = &c.lastBlockNum
+				_, e := c.client.Call(ctx, "block", params, result)
 				if e != nil {
 					c.logger.Error(e)
 					cancel()
@@ -155,7 +169,7 @@ func (c *Config) RunBlockQuerier() {
 				}
 				c.logger.Infof("new block for %d", c.lastBlockNum)
 
-				blockChan <- msg
+				blockChan <- result
 				time.Sleep(100 * time.Millisecond)
 			}
 			c.lastBlockMtx.Unlock()
@@ -164,11 +178,9 @@ func (c *Config) RunBlockQuerier() {
 		}
 	}()
 
-	c.logger.Info(fmt.Sprintf("⚙️ %-12s watching for NewBlock events via %s", c.ChainId, c.client.Remote()))
+	c.logger.Info(fmt.Sprintf("⚙️ %-12s watching for NewBlock events via %s", c.ChainId, c.client))
 	for {
 		select {
-		case <-c.client.Quit():
-			cancel()
 		case <-ctx.Done():
 			return
 		}
@@ -177,7 +189,7 @@ func (c *Config) RunBlockQuerier() {
 
 // handleBlocks consumes the channel for new blocks and when it sees one sends a status update. It's also
 // responsible for stalled chain detection and will shutdown the client if there are no blocks for a minute.
-func handleBlocks(ctx context.Context, blocks chan *coretypes.ResultBlock, results chan StatusUpdate, address string) error {
+func handleBlocks(ctx context.Context, blocks chan *ResultBlock, results chan StatusUpdate, address string) error {
 	live := time.NewTicker(time.Minute)
 	defer live.Stop()
 	lastBlock := time.Now()
@@ -211,3 +223,65 @@ func handleBlocks(ctx context.Context, blocks chan *coretypes.ResultBlock, resul
 		}
 	}
 }
+
+type ResultStatus struct {
+	NodeInfo types.NodeInfo `json:"node_info"`
+	SyncInfo SyncInfo       `json:"sync_info"`
+}
+
+// Info about the node's syncing state
+type SyncInfo struct {
+	LatestBlockHash   bytes.HexBytes `json:"latest_block_hash"`
+	LatestAppHash     bytes.HexBytes `json:"latest_app_hash"`
+	LatestBlockHeight int64          `json:"latest_block_height"`
+	LatestBlockTime   time.Time      `json:"latest_block_time"`
+
+	EarliestBlockHash   bytes.HexBytes `json:"earliest_block_hash"`
+	EarliestAppHash     bytes.HexBytes `json:"earliest_app_hash"`
+	EarliestBlockHeight int64          `json:"earliest_block_height"`
+	EarliestBlockTime   time.Time      `json:"earliest_block_time"`
+
+	MaxPeerBlockHeight int64 `json:"max_peer_block_height"`
+
+	CatchingUp bool `json:"catching_up"`
+
+	TotalSyncedTime time.Duration `json:"total_synced_time"`
+	RemainingTime   time.Duration `json:"remaining_time"`
+
+	TotalSnapshots      int64         `json:"total_snapshots"`
+	ChunkProcessAvgTime time.Duration `json:"chunk_process_avg_time"`
+	SnapshotHeight      int64         `json:"snapshot_height"`
+	SnapshotChunksCount int64         `json:"snapshot_chunks_count"`
+	SnapshotChunksTotal int64         `json:"snapshot_chunks_total"`
+	BackFilledBlocks    int64         `json:"backfilled_blocks"`
+	BackFillBlocksTotal int64         `json:"backfill_blocks_total"`
+}
+
+// Single block (with meta)
+type ResultBlock struct {
+	BlockID types.BlockID `json:"block_id"`
+	Block   *types.Block  `json:"block"`
+}
+
+// Block defines the atomic unit of a Tendermint blockchain.
+type Block struct {
+	LastCommit *Commit `json:"last_commit"`
+}
+
+// Commit contains the evidence that a block was committed by a set of validators.
+// NOTE: Commit is empty for height 1, but never nil.
+type Commit struct {
+	Height     int64       `json:"height"`
+	Round      int32       `json:"round"`
+	Signatures []CommitSig `json:"signatures"`
+}
+
+// CommitSig is a part of the Vote included in a Commit.
+type CommitSig struct {
+	ValidatorAddress Address   `json:"validator_address"`
+	Timestamp        time.Time `json:"timestamp"`
+	Signature        []byte    `json:"signature"`
+}
+
+// Address is hex bytes.
+type Address = crypto.Address

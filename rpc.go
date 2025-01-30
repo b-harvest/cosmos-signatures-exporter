@@ -11,6 +11,7 @@ import (
 	"time"
 
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
+	jsonrpcclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
 )
 
 // newRpc sets up the rpc client used for monitoring. It will try nodes in order until a working node is found.
@@ -31,7 +32,8 @@ func (c *Config) newRpc() error {
 			down = true
 			return
 		}
-		c.client, err = rpchttp.New(u)
+		c.client, err = jsonrpcclient.NewURI(u)
+		c.rpcClient, err = rpchttp.New(u)
 		if err != nil {
 			msg = fmt.Sprintf("❌ could not connect client for %s: (%s) %s", c.name, u, err)
 			c.logger.Warningf(msg)

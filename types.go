@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	log "github.com/sirupsen/logrus"
-	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
+	"github.com/tendermint/tendermint/rpc/client/http"
+	"github.com/tendermint/tendermint/rpc/jsonrpc/client"
 	"sync"
 	"time"
 )
@@ -20,11 +21,12 @@ type Config struct {
 
 	queryInterval time.Duration
 
-	name           string        `yaml:"name"`
-	client         *rpchttp.HTTP // legit tendermint client
-	noNodes        bool          // tracks if all nodes are down
-	valInfo        *ValInfo      // recent validator state, only refreshed every few minutes
-	lastValInfo    *ValInfo      // use for detecting newly-jailed/tombstone
+	name           string `yaml:"name"`
+	client         *client.URIClient
+	rpcClient      *http.HTTP // legit tendermint client
+	noNodes        bool       // tracks if all nodes are down
+	valInfo        *ValInfo   // recent validator state, only refreshed every few minutes
+	lastValInfo    *ValInfo   // use for detecting newly-jailed/tombstone
 	blocksResults  []int
 	lastError      string
 	lastBlockTime  time.Time
