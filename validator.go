@@ -45,7 +45,7 @@ func (c *Config) GetValInfo(first bool) (err error) {
 	// explorers, so make it easy and lookup the consensus key for them.
 	c.valInfo.Conspub, c.valInfo.Moniker, c.valInfo.Jailed, c.valInfo.Bonded, err = getVal(ctx, c.rpcClient, c.ValAddress)
 	if err != nil {
-		return
+		return err
 	}
 	if first && c.valInfo.Bonded {
 		c.logger.Infof("⚙️ found %s (%s) in validator set", c.ValAddress, c.valInfo.Moniker)
@@ -66,17 +66,17 @@ func (c *Config) GetValInfo(first bool) (err error) {
 			if pre, ok := altValopers.getAltPrefix(c.ValAddress); ok {
 				c.valInfo.Valcons, err = bech32.ConvertAndEncode(pre, c.valInfo.Conspub[:20])
 				if err != nil {
-					return
+					return err
 				}
 			} else {
 				err = errors.New("❓ could not determine bech32 prefix from valoper address: " + c.ValAddress)
-				return
+				return err
 			}
 		} else {
 			prefix = split[0] + "valcons"
 			c.valInfo.Valcons, err = bech32.ConvertAndEncode(prefix, c.valInfo.Conspub[:20])
 			if err != nil {
-				return
+				return err
 			}
 		}
 		if first {
@@ -89,17 +89,17 @@ func (c *Config) GetValInfo(first bool) (err error) {
 	qSigning := slashing.QuerySigningInfoRequest{ConsAddress: c.valInfo.Valcons}
 	b, err := qSigning.Marshal()
 	if err != nil {
-		return
+		return err
 	}
 	resp, err := c.rpcClient.ABCIQuery(ctx, "/cosmos.slashing.v1beta1.Query/SigningInfo", b)
 	if resp == nil || resp.Response.Value == nil {
 		err = errors.New("could not query validator slashing status, got empty response")
-		return
+		return err
 	}
 	slash := &slashing.QuerySigningInfoResponse{}
 	err = slash.Unmarshal(resp.Response.Value)
 	if err != nil {
-		return
+		return err
 	}
 	c.valInfo.Tombstoned = slash.ValSigningInfo.Tombstoned
 	if c.valInfo.Tombstoned {
@@ -113,20 +113,20 @@ func (c *Config) GetValInfo(first bool) (err error) {
 		qParams := &slashing.QueryParamsRequest{}
 		b, err = qParams.Marshal()
 		if err != nil {
-			return
+			return err
 		}
 		resp, err = c.rpcClient.ABCIQuery(ctx, "/cosmos.slashing.v1beta1.Query/Params", b)
 		if err != nil {
-			return
+			return err
 		}
 		if resp.Response.Value == nil {
 			err = errors.New("🛑 could not query slashing params, got empty response")
-			return
+			return err
 		}
 		params := &slashing.QueryParamsResponse{}
 		err = params.Unmarshal(resp.Response.Value)
 		if err != nil {
-			return
+			return err
 		}
 		if first {
 			c.statsChan <- c.mkUpdate(metricWindowSize, float64(params.Params.SignedBlocksWindow), "")
